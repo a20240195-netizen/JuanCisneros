@@ -3,7 +3,7 @@ import { HTTPException } from "https://deno.land/x/hono@v3.12.10/http-exception.
 
 const app = new Hono();
 
-// Memory store (para evitar problemas con KV real)
+// Memory KV (evita problemas del runtime)
 const kv = new Map<string, any>();
 
 // ========================
@@ -21,9 +21,7 @@ function checkToken(c) {
 app.post("/kv/set/:key{.*}", async (c) => {
   checkToken(c);
 
-  // 🔥 FIX IMPORTANTE: capturar key EXACTA desde URL
   const key = c.req.path.replace("/kv/set/", "");
-
   const body = await c.req.json();
 
   kv.set(key, body);
@@ -37,10 +35,11 @@ app.post("/kv/set/:key{.*}", async (c) => {
 app.get("/kv/get/:key{.*}", async (c) => {
   checkToken(c);
 
-  // 🔥 MISMA KEY EXACTA QUE EN SET
   const key = c.req.path.replace("/kv/get/", "");
 
-  return c.json({ value: kv.get(key) ?? null });
+  const value = kv.get(key);
+
+  return c.json(value ? { value } : { value: null });
 });
 
 // ========================
@@ -105,7 +104,7 @@ app.delete("/kv/full_reset_42", async (c) => {
 });
 
 // ========================
-// DUMP (debug)
+// DUMP
 // ========================
 app.all("/dump/*", async (c) => {
   const req = c.req;
