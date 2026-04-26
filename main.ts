@@ -2,7 +2,7 @@ import { Hono } from "https://deno.land/x/hono@v3.4.1/mod.ts";
 import { HTTPException } from "https://deno.land/x/hono@v3.12.10/http-exception.ts";
 
 const app = new Hono();
-const kv = await Deno.openKv("default");
+const kv = await Deno.openKv();
 
 // Basic KV operations to support admin interface
 
