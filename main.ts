@@ -3,11 +3,11 @@ import { HTTPException } from "https://deno.land/x/hono@v3.12.10/http-exception.
 
 const app = new Hono();
 
-// Memory store (evita problemas de KV en deploy)
+// Memory store (para evitar problemas con KV real)
 const kv = new Map<string, any>();
 
 // ========================
-// TOKEN CHECK (IMPORTANTE)
+// TOKEN CHECK
 // ========================
 function checkToken(c) {
   const token = c.req.query("token");
@@ -20,9 +20,14 @@ function checkToken(c) {
 // ========================
 app.post("/kv/set/:key{.*}", async (c) => {
   checkToken(c);
-  const key = c.req.param("key");
+
+  // 🔥 FIX IMPORTANTE: capturar key EXACTA desde URL
+  const key = c.req.path.replace("/kv/set/", "");
+
   const body = await c.req.json();
+
   kv.set(key, body);
+
   return c.json({ ok: true });
 });
 
@@ -31,7 +36,10 @@ app.post("/kv/set/:key{.*}", async (c) => {
 // ========================
 app.get("/kv/get/:key{.*}", async (c) => {
   checkToken(c);
-  const key = c.req.param("key");
+
+  // 🔥 MISMA KEY EXACTA QUE EN SET
+  const key = c.req.path.replace("/kv/get/", "");
+
   return c.json({ value: kv.get(key) ?? null });
 });
 
@@ -40,9 +48,11 @@ app.get("/kv/get/:key{.*}", async (c) => {
 // ========================
 app.get("/kv/list/:key{.*}", async (c) => {
   checkToken(c);
-  const prefix = c.req.param("key");
+
+  const prefix = c.req.path.replace("/kv/list/", "");
 
   const records = [];
+
   for (const [k, v] of kv.entries()) {
     if (k.startsWith(prefix)) {
       records.push({ key: k, value: v });
@@ -57,8 +67,11 @@ app.get("/kv/list/:key{.*}", async (c) => {
 // ========================
 app.delete("/kv/delete/:key{.*}", async (c) => {
   checkToken(c);
-  const key = c.req.param("key");
+
+  const key = c.req.path.replace("/kv/delete/", "");
+
   kv.delete(key);
+
   return c.json({ ok: true });
 });
 
@@ -67,9 +80,11 @@ app.delete("/kv/delete/:key{.*}", async (c) => {
 // ========================
 app.delete("/kv/delete_prefix/:key{.*}", async (c) => {
   checkToken(c);
-  const prefix = c.req.param("key");
+
+  const prefix = c.req.path.replace("/kv/delete_prefix/", "");
 
   const deleted = [];
+
   for (const k of kv.keys()) {
     if (k.startsWith(prefix)) {
       kv.delete(k);
