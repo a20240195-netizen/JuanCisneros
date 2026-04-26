@@ -3,25 +3,20 @@ import { HTTPException } from "https://deno.land/x/hono@v3.12.10/http-exception.
 
 const app = new Hono();
 
-// Memory KV (evita problemas del runtime)
 const kv = new Map<string, any>();
 
-// ========================
-// TOKEN CHECK
-// ========================
+// TOKEN
 function checkToken(c) {
   const token = c.req.query("token");
   if (token == "2607_4f9300:8bdf84") return true;
   throw new HTTPException(401, { message: "Missing or invalid token" });
 }
 
-// ========================
 // SET
-// ========================
 app.post("/kv/set/:key{.*}", async (c) => {
   checkToken(c);
 
-  const key = c.req.path.replace("/kv/set/", "");
+  const key = c.req.param("key");
   const body = await c.req.json();
 
   kv.set(key, body);
@@ -29,26 +24,21 @@ app.post("/kv/set/:key{.*}", async (c) => {
   return c.json({ ok: true });
 });
 
-// ========================
 // GET
-// ========================
-app.get("/kv/get/:key{.*}", async (c) => {
+app.get("/kv/get/:key{.*}", (c) => {
   checkToken(c);
 
-  const key = c.req.path.replace("/kv/get/", "");
-
+  const key = c.req.param("key");
   const value = kv.get(key);
 
-  return c.json(value ? { value } : { value: null });
+  return c.json({ value: value ?? null });
 });
 
-// ========================
 // LIST
-// ========================
-app.get("/kv/list/:key{.*}", async (c) => {
+app.get("/kv/list/:key{.*}", (c) => {
   checkToken(c);
 
-  const prefix = c.req.path.replace("/kv/list/", "");
+  const prefix = c.req.param("key");
 
   const records = [];
 
@@ -61,26 +51,21 @@ app.get("/kv/list/:key{.*}", async (c) => {
   return c.json({ records });
 });
 
-// ========================
 // DELETE
-// ========================
-app.delete("/kv/delete/:key{.*}", async (c) => {
+app.delete("/kv/delete/:key{.*}", (c) => {
   checkToken(c);
 
-  const key = c.req.path.replace("/kv/delete/", "");
-
+  const key = c.req.param("key");
   kv.delete(key);
 
   return c.json({ ok: true });
 });
 
-// ========================
 // DELETE PREFIX
-// ========================
-app.delete("/kv/delete_prefix/:key{.*}", async (c) => {
+app.delete("/kv/delete_prefix/:key{.*}", (c) => {
   checkToken(c);
 
-  const prefix = c.req.path.replace("/kv/delete_prefix/", "");
+  const prefix = c.req.param("key");
 
   const deleted = [];
 
@@ -94,18 +79,14 @@ app.delete("/kv/delete_prefix/:key{.*}", async (c) => {
   return c.json({ deleted });
 });
 
-// ========================
 // FULL RESET
-// ========================
-app.delete("/kv/full_reset_42", async (c) => {
+app.delete("/kv/full_reset_42", (c) => {
   checkToken(c);
   kv.clear();
   return c.json({ ok: true });
 });
 
-// ========================
 // DUMP
-// ========================
 app.all("/dump/*", async (c) => {
   const req = c.req;
 
@@ -129,9 +110,7 @@ app.all("/dump/*", async (c) => {
   });
 });
 
-// ========================
 // ERROR HANDLER
-// ========================
 app.onError((err, c) => {
   if (err instanceof HTTPException) {
     return c.text(err.message, err.status);
@@ -139,7 +118,4 @@ app.onError((err, c) => {
   return c.text("Internal Server Error", 500);
 });
 
-// ========================
-// SERVER
-// ========================
 Deno.serve(app.fetch);
